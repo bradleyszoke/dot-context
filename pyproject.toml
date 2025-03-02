@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=42.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dot-context"
+version = "0.1.0"
+description = "A CLI tool for configurable LLM context and queries"
+requires-python = ">=3.8"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+]
+
+dependencies = [
+    "typer>=0.9.0",
+    "rich>=13.4.2",
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+dcx = "dcx.cli:app"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_functions = "test_*"
+
+[tool.black]
+line-length = 88
+
+[tool.flake8]
+max-line-length = 88
+exclude = [".git", "__pycache__", "build", "dist"]
