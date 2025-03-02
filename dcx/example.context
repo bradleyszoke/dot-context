@@ -1,0 +1,70 @@
+# Dot Context Example Configuration
+# This is an example .context file showing various configuration options
+# You can copy this file to your project root and rename it to .context
+
+Sets:
+  # A simple set matching all Python files in the project
+  python:
+    match:
+      - "**/*.py"
+    description: "All Python files"
+  
+  # A set matching only files in a specific directory
+  docs:
+    match:
+      - "docs/**/*.md"
+    description: "Documentation files"
+  
+  # Tests and test utilities
+  tests:
+    match:
+      - "tests/**/*.py"
+      - "**/*test*.py"
+    description: "Test files and utilities"
+  
+  # Configuration files
+  config:
+    match:
+      - "*.toml"
+      - "*.yaml"
+      - "*.yml"
+      - "*.json"
+    description: "Configuration files"
+  
+  # A composite set that includes other sets
+  dev:
+    include:
+      - python
+      - tests
+      - config
+    description: "Developer context - code, tests, and configs"
+  
+  # A set with both direct matches and includes
+  docs_and_python:
+    match:
+      - "README.md"
+    include:
+      - docs
+      - python
+    description: "Documentation and Python code"
+
+# Model configurations for different providers
+Models:
+  # OpenAI model configuration examples
+  # You must specify a valid model name in the "model" field
+  # Model names change over time, so check the OpenAI documentation for current options
+  gpt4:
+    provider: openai
+    api-key: ${OPENAI_API_KEY}
+    model: gpt-4-turbo           # Replace with current model identifier
+    description: "OpenAI GPT-4 model"
+  
+  # Anthropic model configuration examples
+  # You must specify a valid model name in the "model" field
+  # Model names change over time, so check the Anthropic documentation for current options  
+  claude-sonnet:
+    provider: anthropic
+    api-key: ${ANTHROPIC_API_KEY}
+    model: claude-3-sonnet       # Replace with current model identifier
+    description: "Anthropic Claude - balanced capability and speed"
+  

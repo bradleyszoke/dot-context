@@ -3,7 +3,7 @@
 from typing import Dict, Any, Optional
 from rich.console import Console
 
-# Import OPENAI_AVAILABLE at the module level so it can be patched in tests
+# Import availability flags at the module level so they can be patched in tests
 try:
     import openai
 
@@ -11,8 +11,16 @@ try:
 except ImportError:
     OPENAI_AVAILABLE = False
 
+try:
+    import anthropic
+
+    ANTHROPIC_AVAILABLE = True
+except ImportError:
+    ANTHROPIC_AVAILABLE = False
+
 from .base import LLMProvider
 from .openai import OpenAIProvider
+from .anthropic import AnthropicProvider
 
 console = Console()
 
@@ -39,9 +47,14 @@ def get_provider(name: str, config: Dict[str, Any]) -> Optional[LLMProvider]:
             return None
         return OpenAIProvider(config)
 
-    # Additional providers can be added here
-    # elif provider_name == "anthropic":
-    #     return AnthropicProvider(config)
+    elif provider_name == "anthropic":
+        if not ANTHROPIC_AVAILABLE:
+            console.print(
+                "[yellow]Warning:[/yellow] Anthropic provider requested but the anthropic "
+                "package is not installed. Install it with: [bold]pip install dot-context[anthropic][/bold]"
+            )
+            return None
+        return AnthropicProvider(config)
 
     console.print(f"[red]Error:[/red] Unsupported provider: {provider_name}")
     return None

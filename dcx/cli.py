@@ -57,18 +57,40 @@ Sets:
       - "*.md"
     description: "Example context set matching all markdown files"
 
+  code:
+    match:
+      - "**/*.py"
+    description: "All Python code files"
+
 Models:
+  # You MUST specify a valid model name for each provider
+  # Model names change over time, check provider documentation for current options
   openai:
     provider: openai
     api-key: ${OPENAI_API_KEY}
-    model: gpt-4
-    description: "OpenAI GPT-4 model"
+    model: gpt-4           # Replace with your desired OpenAI model
+    description: "OpenAI model"
+    
+  claude:
+    provider: anthropic
+    api-key: ${ANTHROPIC_API_KEY}
+    model: claude-3-opus   # Replace with your desired Anthropic model
+    description: "Anthropic Claude model"
 """
 
     with open(config_path, "w", encoding="utf-8") as f:
         f.write(sample_config)
 
     console.print(f"[green]Successfully created[/green] .context file at {config_path}")
+    console.print("\nTo use this configuration:")
+    console.print("1. Set your API keys as environment variables:")
+    console.print("   export OPENAI_API_KEY=your_api_key_here")
+    console.print("   export ANTHROPIC_API_KEY=your_api_key_here")
+    console.print("\n2. Install required providers:")
+    console.print("   pip install dot-context[openai]")
+    console.print("   pip install dot-context[anthropic]")
+    console.print("   # Or install all providers with:")
+    console.print("   pip install dot-context[all]")
 
 
 @app.command()

@@ -1,14 +1,14 @@
-"""OpenAI provider implementation."""
+"""Anthropic provider implementation."""
 
 import os
 from typing import Dict, Any, Optional, Iterator, List
 
 # Use the module-level OPENAI_AVAILABLE from __init__.py
-from . import OPENAI_AVAILABLE
+from . import ANTHROPIC_AVAILABLE
 
 # Only import OpenAI if the package is available
-if OPENAI_AVAILABLE:
-    from openai import OpenAI
+if ANTHROPIC_AVAILABLE:
+    from anthropic import Anthropic
 
 from .base import LLMProvider
 from rich.console import Console
@@ -16,32 +16,29 @@ from rich.console import Console
 console = Console()
 
 
-class OpenAIProvider(LLMProvider):
-    """OpenAI API provider."""
+class AnthropicProvider(LLMProvider):
+    """Anthropic API provider."""
 
     def __init__(self, config: Dict[str, Any]):
         """
-        Initialize the OpenAI provider.
+        Initialize the Anthropic provider.
 
         Args:
             config: Provider configuration from the .context file
         """
         self.config = config
-        self.model = config.get("model")
-        if not self.model:
-            console.print(
-                "[red]Error:[/red] No model specified for OpenAI provider. "
-                "Please specify a model in your .context file."
-            )
+        self.model = config.get("model", "claude-3-opus-20240229")
         self.api_key = config.get("api-key")
         self.client = None
 
-        # Initialize client if OpenAI is available
-        if OPENAI_AVAILABLE and self.api_key:
+        # Initialize client if Anthropic is available
+        if ANTHROPIC_AVAILABLE and self.api_key:
             try:
-                self.client = OpenAI(api_key=self.api_key)
+                self.client = Anthropic(api_key=self.api_key)
             except Exception as e:
-                console.print(f"[red]Error initializing OpenAI client:[/red] {str(e)}")
+                console.print(
+                    f"[red]Error initializing Anthropic client:[/red] {str(e)}"
+                )
 
     def validate_config(self) -> bool:
         """
@@ -50,24 +47,24 @@ class OpenAIProvider(LLMProvider):
         Returns:
             True if configuration is valid, False otherwise
         """
-        if not OPENAI_AVAILABLE:
+        if not ANTHROPIC_AVAILABLE:
             console.print(
-                "[red]Error:[/red] OpenAI Python package not installed. "
-                "Install it with: [bold]pip install openai[/bold]"
+                "[red]Error:[/red] Anthropic Python package not installed. "
+                "Install it with: [bold]pip install anthropic[/bold]"
             )
             return False
 
         if not self.api_key:
             console.print(
-                "[red]Error:[/red] No API key provided for OpenAI. "
-                "Set the OPENAI_API_KEY environment variable or provide it in the .context file."
+                "[red]Error:[/red] No API key provided for Anthropic. "
+                "Set the ANTHROPIC_API_KEY environment variable or provide it in the .context file."
             )
             return False
 
         if not self.model:
             console.print(
-                "[red]Error:[/red] No model specified for OpenAI. "
-                "Please specify a model in your .context file."
+                "[red]Error:[/red] No model specified for Anthropic. "
+                "Please specify a model in the .context file."
             )
             return False
 
@@ -75,30 +72,6 @@ class OpenAIProvider(LLMProvider):
             return False
 
         return True
-
-    def _create_messages(
-        self, prompt: str, system_prompt: Optional[str] = None
-    ) -> List[Dict[str, str]]:
-        """
-        Create the messages for the OpenAI API.
-
-        Args:
-            prompt: User prompt text
-            system_prompt: Optional system instructions
-
-        Returns:
-            List of message dictionaries
-        """
-        messages = []
-
-        # Add system message if provided
-        if system_prompt:
-            messages.append({"role": "system", "content": system_prompt})
-
-        # Add user message
-        messages.append({"role": "user", "content": prompt})
-
-        return messages
 
     def get_completion(
         self,
@@ -108,7 +81,7 @@ class OpenAIProvider(LLMProvider):
         max_tokens: Optional[int] = None,
     ) -> str:
         """
-        Get a completion from OpenAI.
+        Get a completion from Anthropic.
 
         Args:
             prompt: The prompt to send to the model
@@ -120,21 +93,28 @@ class OpenAIProvider(LLMProvider):
             The generated completion text
         """
         if not self.validate_config():
-            return "Error: OpenAI provider not properly configured."
+            return "Error: Anthropic provider not properly configured."
 
-        messages = self._create_messages(prompt, system_prompt)
+        messages = [{"role": "user", "content": prompt}]
 
         try:
-            response = self.client.chat.completions.create(
+            response = self.client.messages.create(
                 model=self.model,
                 messages=messages,
+                system=system_prompt,
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
 
-            return response.choices[0].message.content or ""
+            # Extract text from the response
+            if response.content and len(response.content) > 0:
+                return response.content[0].text
+            return ""
+
         except Exception as e:
-            console.print(f"[red]Error getting completion from OpenAI:[/red] {str(e)}")
+            console.print(
+                f"[red]Error getting completion from Anthropic:[/red] {str(e)}"
+            )
             return f"Error: {str(e)}"
 
     def get_completion_stream(
@@ -145,7 +125,7 @@ class OpenAIProvider(LLMProvider):
         max_tokens: Optional[int] = None,
     ) -> Iterator[str]:
         """
-        Stream a completion from OpenAI.
+        Stream a completion from Anthropic.
 
         Args:
             prompt: The prompt to send to the model
@@ -157,25 +137,24 @@ class OpenAIProvider(LLMProvider):
             Iterator yielding completion text chunks
         """
         if not self.validate_config():
-            yield "Error: OpenAI provider not properly configured."
+            yield "Error: Anthropic provider not properly configured."
             return
 
-        messages = self._create_messages(prompt, system_prompt)
+        messages = [{"role": "user", "content": prompt}]
 
         try:
-            response = self.client.chat.completions.create(
+            with self.client.messages.stream(
                 model=self.model,
                 messages=messages,
+                system=system_prompt,
                 temperature=temperature,
                 max_tokens=max_tokens,
-                stream=True,
-            )
+            ) as stream:
+                for text in stream.text_stream:
+                    yield text
 
-            for chunk in response:
-                if chunk.choices and chunk.choices[0].delta.content:
-                    yield chunk.choices[0].delta.content
         except Exception as e:
             console.print(
-                f"[red]Error streaming completion from OpenAI:[/red] {str(e)}"
+                f"[red]Error streaming completion from Anthropic:[/red] {str(e)}"
             )
             yield f"Error: {str(e)}"
