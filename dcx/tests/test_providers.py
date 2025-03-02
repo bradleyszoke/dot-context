@@ -392,7 +392,7 @@ def _setup_anthropic_streaming_mock(mock_client):
     # Setup mock stream
     mock_stream = MagicMock()
     mock_stream_instance = MagicMock()
-    mock_stream_instance.text_stream = ["Hello", " world", "!"]
+    mock_stream_instance.text_stream = iter(["Hello", " world", "!"])
     mock_stream.__enter__.return_value = mock_stream_instance
     mock_messages.stream.return_value = mock_stream
 
@@ -409,7 +409,6 @@ def _verify_anthropic_streaming_call(
         system="System instructions",
         temperature=temperature,
         max_tokens=max_tokens,
-        stream=True,
     )
 
 

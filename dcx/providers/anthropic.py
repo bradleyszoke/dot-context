@@ -3,10 +3,8 @@
 import os
 from typing import Dict, Any, Optional, Iterator, List
 
-# Use the module-level OPENAI_AVAILABLE from __init__.py
 from . import ANTHROPIC_AVAILABLE
 
-# Only import OpenAI if the package is available
 if ANTHROPIC_AVAILABLE:
     from anthropic import Anthropic
 
@@ -20,18 +18,12 @@ class AnthropicProvider(LLMProvider):
     """Anthropic API provider."""
 
     def __init__(self, config: Dict[str, Any]):
-        """
-        Initialize the Anthropic provider.
-
-        Args:
-            config: Provider configuration from the .context file
-        """
+        """Initialize the Anthropic provider."""
         self.config = config
         self.model = config.get("model", "claude-3-opus-20240229")
         self.api_key = config.get("api-key")
         self.client = None
 
-        # Initialize client if Anthropic is available
         if ANTHROPIC_AVAILABLE and self.api_key:
             try:
                 self.client = Anthropic(api_key=self.api_key)
@@ -41,12 +33,7 @@ class AnthropicProvider(LLMProvider):
                 )
 
     def validate_config(self) -> bool:
-        """
-        Validate that the provider has all required configuration.
-
-        Returns:
-            True if configuration is valid, False otherwise
-        """
+        """Validate the provider configuration."""
         if not ANTHROPIC_AVAILABLE:
             console.print(
                 "[red]Error:[/red] Anthropic Python package not installed. "
@@ -80,33 +67,24 @@ class AnthropicProvider(LLMProvider):
         temperature: float = 0.7,
         max_tokens: Optional[int] = None,
     ) -> str:
-        """
-        Get a completion from Anthropic.
-
-        Args:
-            prompt: The prompt to send to the model
-            system_prompt: Optional system instructions
-            temperature: Temperature parameter (0.0 to 1.0)
-            max_tokens: Maximum tokens to generate (None for model default)
-
-        Returns:
-            The generated completion text
-        """
+        """Get a completion from Anthropic."""
         if not self.validate_config():
             return "Error: Anthropic provider not properly configured."
 
-        messages = [{"role": "user", "content": prompt}]
-
         try:
-            response = self.client.messages.create(
-                model=self.model,
-                messages=messages,
-                system=system_prompt,
-                temperature=temperature,
-                max_tokens=max_tokens,
-            )
+            # Create the request parameters
+            params = {
+                "model": self.model,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": temperature,
+                "max_tokens": (max_tokens if max_tokens is not None else 1024),
+            }
 
-            # Extract text from the response
+            if system_prompt:
+                params["system"] = system_prompt
+
+            response = self.client.messages.create(**params)
+
             if response.content and len(response.content) > 0:
                 return response.content[0].text
             return ""
@@ -124,32 +102,23 @@ class AnthropicProvider(LLMProvider):
         temperature: float = 0.7,
         max_tokens: Optional[int] = None,
     ) -> Iterator[str]:
-        """
-        Stream a completion from Anthropic.
-
-        Args:
-            prompt: The prompt to send to the model
-            system_prompt: Optional system instructions
-            temperature: Temperature parameter (0.0 to 1.0)
-            max_tokens: Maximum tokens to generate (None for model default)
-
-        Returns:
-            Iterator yielding completion text chunks
-        """
+        """Stream a completion from Anthropic."""
         if not self.validate_config():
             yield "Error: Anthropic provider not properly configured."
             return
 
-        messages = [{"role": "user", "content": prompt}]
-
         try:
-            with self.client.messages.stream(
-                model=self.model,
-                messages=messages,
-                system=system_prompt,
-                temperature=temperature,
-                max_tokens=max_tokens,
-            ) as stream:
+            params = {
+                "model": self.model,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": temperature,
+                "max_tokens": (max_tokens if max_tokens is not None else 1024),
+            }
+
+            if system_prompt:
+                params["system"] = system_prompt
+
+            with self.client.messages.stream(**params) as stream:
                 for text in stream.text_stream:
                     yield text
 
