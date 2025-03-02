@@ -160,30 +160,42 @@ def execute_query(
         )
         console.print(f"[bold]Query:[/bold] {query}\n")
 
-        # Display "Thinking..." message
-        with console.status("[bold cyan]Thinking...[/bold cyan]"):
-            # Execute query based on stream preference
-            if stream:
-                console.print("[bold cyan]Response:[/bold cyan]")
+        # Display "Thinking..." message and execute query
+        if stream:
+            # First show thinking status
+            with console.status("[bold cyan]Thinking...[/bold cyan]"):
+                # Prepare response but don't stream yet
+                stream_generator = provider.get_completion_stream(
+                    prompt, system_prompt, temperature, max_tokens
+                )
+                # Force initial connection/response
+                stream_iterator = iter(stream_generator)
+                try:
+                    first_chunk = next(stream_iterator)
+                except StopIteration:
+                    first_chunk = ""
 
-                # Use Live display for streaming
-                with Live(console=console, refresh_per_second=10) as live:
-                    response_text = ""
+            # Then show response with streaming
+            console.print("[bold cyan]Response:[/bold cyan]")
+            response_text = first_chunk
 
-                    for chunk in provider.get_completion_stream(
-                        prompt, system_prompt, temperature, max_tokens
-                    ):
-                        response_text += chunk
-                        # Use Markdown rendering for the partial response
-                        live.update(Markdown(response_text))
-            else:
-                # Non-streaming mode
+            # Use Live display for streaming (after the status context is closed)
+            with Live(console=console, refresh_per_second=10) as live:
+                live.update(Markdown(response_text))
+
+                # Continue with the rest of the stream
+                for chunk in stream_iterator:
+                    response_text += chunk
+                    live.update(Markdown(response_text))
+        else:
+            # Non-streaming mode
+            with console.status("[bold cyan]Thinking...[/bold cyan]"):
                 response = provider.get_completion(
                     prompt, system_prompt, temperature, max_tokens
                 )
 
-                console.print("[bold cyan]Response:[/bold cyan]")
-                console.print(Markdown(response))
+            console.print("[bold cyan]Response:[/bold cyan]")
+            console.print(Markdown(response))
 
         console.print("\n[dim]Query complete.[/dim]")
 
