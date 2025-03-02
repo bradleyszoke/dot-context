@@ -3,14 +3,16 @@
 import typer
 from rich.console import Console
 from rich.table import Table
+from rich.markdown import Markdown
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 
 # Import version at the module level
 from . import __version__
 from .config import load_config, find_config_file
 from .context_sets import load_context_sets, get_context_set_files
 from .utils.tokens import count_tokens_in_file, format_token_count
+from .query import execute_query
 
 app = typer.Typer(help="A CLI tool for configurable LLM context")
 console = Console()
@@ -56,11 +58,11 @@ Sets:
     description: "Example context set matching all markdown files"
 
 Models:
-  claude:
-    provider: anthropic
-    api-key: ${ANTHROPIC_API_KEY}
-    model: claude-3-opus
-    description: "Large context model"
+  openai:
+    provider: openai
+    api-key: ${OPENAI_API_KEY}
+    model: gpt-4
+    description: "OpenAI GPT-4 model"
 """
 
     with open(config_path, "w", encoding="utf-8") as f:
@@ -317,10 +319,50 @@ def list_models(
         console.print(f"[red]Error listing models:[/red] {str(e)}")
 
 
-# Future: Add query command here
-# @app.command()
-# def query(...):
-#     """Query an LLM with context."""
+@app.command()
+def query(
+    query_text: str = typer.Argument(..., help="The query text to send to the LLM"),
+    set_name: str = typer.Option(
+        ..., "--set", "-s", help="Name of the context set to use"
+    ),
+    model_name: str = typer.Option(
+        ..., "--model", "-m", help="Name of the model to use"
+    ),
+    system_prompt: Optional[str] = typer.Option(
+        None, "--system", help="Optional system prompt or instructions"
+    ),
+    temperature: float = typer.Option(
+        0.7, "--temperature", "-t", min=0.0, max=2.0, help="Model temperature"
+    ),
+    max_tokens: Optional[int] = typer.Option(
+        None, "--max-tokens", help="Maximum tokens to generate"
+    ),
+    no_stream: bool = typer.Option(
+        False, "--no-stream", help="Disable streaming (wait for full response)"
+    ),
+    hide_filenames: bool = typer.Option(
+        False, "--hide-filenames", help="Exclude filenames from context"
+    ),
+    config_path: Optional[Path] = typer.Option(
+        None, "--file", "-f", help="Path to .context file"
+    ),
+):
+    """
+    Query an LLM with a specific context set.
+    """
+    # Execute the query
+    execute_query(
+        query=query_text,
+        set_name=set_name,
+        model_name=model_name,
+        system_prompt=system_prompt,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        stream=not no_stream,
+        include_filenames=not hide_filenames,
+        config_path=config_path,
+    )
+
 
 if __name__ == "__main__":
     app()
