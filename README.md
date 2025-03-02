@@ -53,28 +53,6 @@ Query an LLM with a specific context:
 dcx query --set worldbuilding --model claude "Describe the climate of the Northern Region"
 ```
 
-Core Features
-Context Sets
-Define collections of files to include as context:
-```bash
-# List available context sets
-dcx sets list
-
-# Show files in a context set
-dcx sets show worldbuilding
-Models
-Configure different LLM providers and models:
-bashCopy# List available models
-dcx models list
-Querying
-Send queries to models with specific context:
-bashCopy# Query with context
-dcx query --set characters --model claude "How would character X react to Y?"
-
-# Preview context without querying
-dcx query --set worldbuilding --model claude --preview "Any query"
-```
-
 ## Configuration
 The .context file supports:
 
