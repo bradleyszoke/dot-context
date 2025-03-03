@@ -2,22 +2,31 @@
 A CLI tool for configurable LLM context management and queries
 
 ## Overview
-Dot Context is a simple, powerful command-line tool that helps you manage context for AI large language models. It allows you to define context sets from your project files and query various LLM providers with those contexts.
-Perfect for fiction writers, developers, researchers, and anyone who needs consistent context when working with AI models.
+Dot Context allows configuration of LLM context and queries. 
+
+> **⚠️ Work in Progress**  
+> This tool is currently under active development and is not yet published to PyPI.
 
 ## Installation
-```bash
-pip install dot-context
-```
 
-For OpenAI support:
-```bash
-pip install dot-context[openai]
-```
+Since this package is not yet published to PyPI, you'll need to install it from the local directory:
 
-For all providers:
 ```bash
-pip install dot-context[all]
+# Clone the repository
+git clone https://github.com/username/dot-context.git
+cd dot-context
+
+# Install in development mode
+pip install -e .
+
+# For OpenAI support:
+pip install -e ".[openai]"
+
+# For Anthropic support:
+pip install -e ".[anthropic]"
+
+# For all providers:
+pip install -e ".[all]"
 ```
 
 ### Quick Start
@@ -114,3 +123,11 @@ The .context file supports:
 - Set composition by including other sets
 - Multiple models from different providers
 - Environment variables for sensitive keys
+
+## Current Status
+
+This tool is in active development. Some features may be incomplete or subject to change.
+
+## License
+
+MIT License
