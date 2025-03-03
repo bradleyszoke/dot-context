@@ -8,6 +8,7 @@ from dcx.providers import get_provider
 from dcx.providers.base import LLMProvider
 from dcx.providers.openai import OpenAIProvider
 from dcx.providers.anthropic import AnthropicProvider
+from dcx.providers.gemini import GeminiProvider, GEMINI_BASE_URL
 
 
 # --- Provider Config Fixtures ---
@@ -35,6 +36,17 @@ def mock_anthropic_config():
     }
 
 
+@pytest.fixture
+def mock_gemini_config():
+    """Sample Gemini configuration."""
+    return {
+        "provider": "gemini",
+        "api-key": "test-key",
+        "model": "gemini-2.0-flash",
+        "description": "Test model",
+    }
+
+
 # --- Provider Parameters ---
 
 PROVIDER_PARAMS = [
@@ -53,6 +65,15 @@ PROVIDER_PARAMS = [
         "client_class": "Anthropic",
         "provider_class": AnthropicProvider,
         "available_var": "ANTHROPIC_AVAILABLE",
+    },
+    {
+        "name": "gemini",
+        "config_fixture": "mock_gemini_config",
+        "module_path": "dcx.providers.gemini",
+        "client_class": "OpenAI",  # Gemini uses OpenAI client through compatibility layer
+        "provider_class": GeminiProvider,
+        "available_var": "OPENAI_AVAILABLE",
+        "base_url": GEMINI_BASE_URL,  # Special case for Gemini
     },
 ]
 
@@ -91,7 +112,14 @@ def test_provider_init(request, provider_param):
         assert provider.model == config["model"]
         assert provider.api_key == "test-key"
         assert provider.client is not None
-        mock_client.assert_called_once_with(api_key="test-key")
+
+        # Check client initialization (special case for Gemini with base_url)
+        if "base_url" in provider_param:
+            mock_client.assert_called_once_with(
+                api_key="test-key", base_url=provider_param["base_url"]
+            )
+        else:
+            mock_client.assert_called_once_with(api_key="test-key")
 
     finally:
         # Clean up patches
@@ -191,6 +219,18 @@ def _get_completion_test_params():
             ),
             "expected_response": "Test response",
             "expected_call": _verify_anthropic_completion_call,
+        }
+    )
+
+    # Gemini completion test parameters (uses OpenAI client)
+    test_params.append(
+        {
+            "provider_param": PROVIDER_PARAMS[2],  # Gemini
+            "setup_mock": lambda mock_client: _setup_openai_completion_mock(
+                mock_client
+            ),
+            "expected_response": "Test response",
+            "expected_call": _verify_openai_completion_call,
         }
     )
 
@@ -296,7 +336,7 @@ def test_get_completion(request, test_param):
         assert response == test_param["expected_response"]
 
         # Different path to the create method based on provider
-        if provider_param["name"] == "openai":
+        if provider_param["name"] == "openai" or provider_param["name"] == "gemini":
             mock_create = mock_client_instance.chat.completions.create
             expected_messages = [
                 {"role": "system", "content": "System instructions"},
@@ -343,6 +383,16 @@ def _get_streaming_test_params():
             ),
             "expected_chunks": ["Hello", " world", "!"],
             "expected_call": _verify_anthropic_streaming_call,
+        }
+    )
+
+    # Gemini streaming test parameters (uses OpenAI client)
+    test_params.append(
+        {
+            "provider_param": PROVIDER_PARAMS[2],  # Gemini
+            "setup_mock": lambda mock_client: _setup_openai_streaming_mock(mock_client),
+            "expected_chunks": ["Hello", " world", "!"],
+            "expected_call": _verify_openai_streaming_call,
         }
     )
 
@@ -451,7 +501,7 @@ def test_get_completion_stream(request, test_param):
         assert chunks == test_param["expected_chunks"]
 
         # Different path to the create method based on provider
-        if provider_param["name"] == "openai":
+        if provider_param["name"] == "openai" or provider_param["name"] == "gemini":
             mock_create = mock_client_instance.chat.completions.create
             expected_messages = [
                 {"role": "system", "content": "System instructions"},

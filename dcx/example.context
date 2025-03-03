@@ -67,4 +67,17 @@ Models:
     api-key: ${ANTHROPIC_API_KEY}
     model: claude-3-sonnet       # Replace with current model identifier
     description: "Anthropic Claude - balanced capability and speed"
-  
+    
+  # Gemini model configuration examples (using OpenAI compatibility)
+  # You must specify a valid model name in the "model" field
+  gemini-flash:
+    provider: gemini
+    api-key: ${GEMINI_API_KEY}
+    model: gemini-2.0-flash      # Current fastest model
+    description: "Google Gemini 2.0 Flash - fast and efficient"
+    
+  gemini-pro:
+    provider: gemini
+    api-key: ${GEMINI_API_KEY}
+    model: gemini-2.0-pro        # Pro model for more in-depth responses
+    description: "Google Gemini 2.0 Pro - better for complex tasks"

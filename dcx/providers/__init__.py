@@ -21,6 +21,7 @@ except ImportError:
 from .base import LLMProvider
 from .openai import OpenAIProvider
 from .anthropic import AnthropicProvider
+from .gemini import GeminiProvider
 
 console = Console()
 
@@ -30,7 +31,7 @@ def get_provider(name: str, config: Dict[str, Any]) -> Optional[LLMProvider]:
     Get a provider instance based on the provider name.
 
     Args:
-        name: Provider name from config (e.g., 'openai', 'anthropic')
+        name: Provider name from config (e.g., 'openai', 'anthropic', 'gemini')
         config: Provider configuration dictionary
 
     Returns:
@@ -55,6 +56,15 @@ def get_provider(name: str, config: Dict[str, Any]) -> Optional[LLMProvider]:
             )
             return None
         return AnthropicProvider(config)
+
+    elif provider_name == "gemini":
+        if not OPENAI_AVAILABLE:
+            console.print(
+                "[yellow]Warning:[/yellow] Gemini provider requested but the openai "
+                "package is not installed. Install it with: [bold]pip install dot-context[openai][/bold]"
+            )
+            return None
+        return GeminiProvider(config)
 
     console.print(f"[red]Error:[/red] Unsupported provider: {provider_name}")
     return None

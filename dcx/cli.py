@@ -76,6 +76,12 @@ Models:
     api-key: ${ANTHROPIC_API_KEY}
     model: claude-3-opus   # Replace with your desired Anthropic model
     description: "Anthropic Claude model"
+    
+  gemini:
+    provider: gemini
+    api-key: ${GEMINI_API_KEY}
+    model: gemini-2.0-flash # Replace with your desired Gemini model
+    description: "Google Gemini model (using OpenAI compatibility)"
 """
 
     with open(config_path, "w", encoding="utf-8") as f:
@@ -86,9 +92,13 @@ Models:
     console.print("1. Set your API keys as environment variables:")
     console.print("   export OPENAI_API_KEY=your_api_key_here")
     console.print("   export ANTHROPIC_API_KEY=your_api_key_here")
+    console.print(
+        "   export GEMINI_API_KEY=your_api_key_here  # Get from https://aistudio.google.com/app/apikey"
+    )
     console.print("\n2. Install required providers:")
     console.print("   pip install dot-context[openai]")
     console.print("   pip install dot-context[anthropic]")
+    console.print("   pip install dot-context[gemini]  # Uses OpenAI compatibility")
     console.print("   # Or install all providers with:")
     console.print("   pip install dot-context[all]")
 
