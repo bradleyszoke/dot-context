@@ -37,7 +37,9 @@ Initialize a `.context` file in your project:
 dcx init
 ```
 
-Edit the generated `.context` file to define your context sets and models:
+Edit the generated `.context` file to define your context sets and models. 
+
+Sets use glob patterns to determine which files will be pulled in as context for the query, while models define which options you have (o1, gemini, etc). 
 
 ```yaml
 Sets:
@@ -52,17 +54,17 @@ Sets:
     description: "Character profiles"
 
 Models:
-  claude:
-    provider: anthropic
-    api-key: ${ANTHROPIC_API_KEY}
-    model: claude-3-opus
-    description: "Large context model"
+  large-context:
+    provider: gemini
+    api-key: ${GEMINI_API_KEY}
+    model: gemini-2.0-flash
+    description: "Gemini model"
   
-  gpt4:
+  quick-questions:
     provider: openai
     api-key: ${OPENAI_API_KEY}
-    model: gpt-4
-    description: "OpenAI GPT-4 model"
+    model: gpt-4o
+    description: "OpenAI GPT-4o model"
 ```
 
 Set your API keys as environment variables:
@@ -70,12 +72,13 @@ Set your API keys as environment variables:
 ```bash
 export ANTHROPIC_API_KEY=your_api_key_here
 export OPENAI_API_KEY=your_api_key_here
+export GEMINI_API_KEY=your_api_key_here
 ```
 
 Query an LLM with a specific context:
 
 ```bash
-dcx query --set worldbuilding --model gpt4 "Describe the climate of the Northern Region"
+dcx query --set worldbuilding --model quick-questions "Describe the climate of the Northern Region"
 ```
 
 ## Context Sets
