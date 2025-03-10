@@ -10,7 +10,7 @@ from rich.live import Live
 from rich.text import Text
 
 from .config import load_config
-from .context_sets import get_context_set_files
+from .context_sets import get_context_set_files, load_context_sets
 from .providers import get_provider
 from .utils.tokens import count_tokens_in_file, format_token_count
 
@@ -77,6 +77,40 @@ def create_prompt(context: str, query: str, include_filenames: bool = True) -> s
     return prompt
 
 
+def format_context_from_multiple_sets(
+    set_names: List[str], config_path: Optional[Path] = None
+) -> Tuple[str, int]:
+    """
+    Format context from multiple context sets.
+
+    Args:
+        set_names: List of set names to include
+        config_path: Path to the .context file
+
+    Returns:
+        Tuple of (formatted context string, total token count)
+    """
+    all_files = []
+    for set_name in set_names:
+        try:
+            files = get_context_set_files(set_name, config_path)
+            all_files.extend(files)
+        except KeyError:
+            console.print(
+                f"[yellow]Warning:[/yellow] Context set '{set_name}' not found"
+            )
+
+    # Remove duplicates while preserving order
+    unique_files = []
+    seen = set()
+    for file in all_files:
+        if file not in seen:
+            seen.add(file)
+            unique_files.append(file)
+
+    return format_context_from_files(unique_files)
+
+
 def execute_query(
     query: str,
     set_name: str,
@@ -93,7 +127,7 @@ def execute_query(
 
     Args:
         query: The query to send to the model
-        set_name: Name of the context set to use
+        set_name: Name of the context set to use (can be comma-separated for multiple sets)
         model_name: Name of the model to use
         system_prompt: Optional system instructions
         temperature: Model temperature (0.0 to 1.0)
@@ -115,27 +149,45 @@ def execute_query(
 
         model_config = config["Models"][model_name]
 
-        # Get files from context set
-        try:
-            files = get_context_set_files(set_name, config_path)
-        except KeyError:
-            console.print(f"[red]Error:[/red] Context set '{set_name}' not found")
-            return
+        # Check if we have multiple sets (comma-separated)
+        set_names = [s.strip() for s in set_name.split(",")]
 
-        if not files:
-            console.print(
-                f"[yellow]Warning:[/yellow] No files found in context set '{set_name}'"
+        if len(set_names) > 1:
+            # Multiple sets specified
+            context, total_tokens = format_context_from_multiple_sets(
+                set_names, config_path
             )
-            proceed = console.input(
-                "Do you want to proceed with an empty context? [y/N]: "
-            ).lower()
-            if proceed != "y":
-                console.print("Query cancelled.")
-                return
-            context = ""
-            total_tokens = 0
+            files_count = sum(
+                len(get_context_set_files(s, config_path))
+                for s in set_names
+                if s in load_context_sets(config_path)
+            )
+            set_display = ", ".join(set_names)
         else:
-            context, total_tokens = format_context_from_files(files)
+            # Single set specified
+            try:
+                files = get_context_set_files(set_name, config_path)
+                files_count = len(files)
+            except KeyError:
+                console.print(f"[red]Error:[/red] Context set '{set_name}' not found")
+                return
+
+            if not files:
+                console.print(
+                    f"[yellow]Warning:[/yellow] No files found in context set '{set_name}'"
+                )
+                proceed = console.input(
+                    "Do you want to proceed with an empty context? [y/N]: "
+                ).lower()
+                if proceed != "y":
+                    console.print("Query cancelled.")
+                    return
+                context = ""
+                total_tokens = 0
+            else:
+                context, total_tokens = format_context_from_files(files)
+
+            set_display = set_name
 
         # Get the provider
         provider = get_provider(model_name, model_config)
@@ -153,7 +205,7 @@ def execute_query(
 
         # Display query information
         console.print(
-            f"\n[bold]Context:[/bold] {set_name} ({len(files)} files, ~{format_token_count(total_tokens)} tokens)"
+            f"\n[bold]Context:[/bold] {set_display} ({files_count} files, ~{format_token_count(total_tokens)} tokens)"
         )
         console.print(
             f"[bold]Model:[/bold] {model_name} ({model_config.get('provider', 'unknown')})"

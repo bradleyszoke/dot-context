@@ -220,12 +220,19 @@ def list_sets(
 
 @sets_app.command("show")
 def show_set(
-    set_name: str = typer.Argument(..., help="Name of the context set to show"),
+    set_name: str = typer.Argument(
+        ..., help="Name of the context set to show (comma-separated for multiple sets)"
+    ),
     config_path: Optional[Path] = typer.Option(
         None, "--file", "-f", help="Path to .context file"
     ),
 ):
-    """Show files in a specific context set."""
+    """
+    Show files in one or more context sets.
+
+    You can specify multiple context sets by separating them with commas:
+    dcx sets show code,tests
+    """
     try:
         if config_path is None:
             found_path = find_config_file()
@@ -237,65 +244,93 @@ def show_set(
                 console.print("Run [bold]dcx init[/bold] to create one.")
                 return
 
-        try:
-            files = get_context_set_files(set_name, config_path)
+        # Check if we have multiple sets (comma-separated)
+        set_names = [s.strip() for s in set_name.split(",")]
+        all_files = []
+        missing_sets = []
 
+        for s in set_names:
+            try:
+                files = get_context_set_files(s, config_path)
+                all_files.extend(files)
+            except KeyError:
+                missing_sets.append(s)
+
+        # Remove duplicates while preserving order
+        unique_files = []
+        seen = set()
+        for file in all_files:
+            if file not in seen:
+                seen.add(file)
+                unique_files.append(file)
+
+        # Display appropriate set name
+        if len(set_names) > 1:
+            set_display = ", ".join(set_names)
+        else:
+            set_display = set_name
+
+        # Report any missing sets
+        if missing_sets:
             console.print(
-                f"\n[bold]Files in context set '[cyan]{set_name}[/cyan]':[/bold]"
+                f"[red]Error:[/red] Context set(s) not found: {', '.join(missing_sets)}"
             )
-
-            if not files:
-                console.print(
-                    "[yellow]No files found matching the patterns in this set.[/yellow]"
-                )
+            if not all_files:  # If all sets were missing, exit
                 return
 
-            table = Table(show_header=True)
-            table.add_column("File", style="cyan")
-            table.add_column("Size (bytes)", justify="right")
-            table.add_column("Est. Tokens", justify="right")
+        console.print(
+            f"\n[bold]Files in context set(s) '[cyan]{set_display}[/cyan]':[/bold]"
+        )
 
-            total_size = 0
-            total_tokens = 0
-
-            for file_path in files:
-                # Get token count and size
-                file_info = count_tokens_in_file(file_path)
-                size = file_info["size_bytes"]
-                tokens = file_info["tokens"]
-
-                # Update totals
-                total_size += size
-                total_tokens += tokens
-
-                # Format token count
-                formatted_tokens = format_token_count(tokens)
-
-                table.add_row(str(file_path), str(size), formatted_tokens)
-
-            console.print(table)
-
-            # Print totals
+        if not unique_files:
             console.print(
-                f"\nTotal: [bold]{len(files)}[/bold] files, "
-                f"[bold]{total_size}[/bold] bytes, "
-                f"[bold]{format_token_count(total_tokens)}[/bold] estimated tokens"
+                "[yellow]No files found matching the patterns in these sets.[/yellow]"
+            )
+            return
+
+        table = Table(show_header=True)
+        table.add_column("File", style="cyan")
+        table.add_column("Size (bytes)", justify="right")
+        table.add_column("Est. Tokens", justify="right")
+
+        total_size = 0
+        total_tokens = 0
+
+        for file_path in unique_files:
+            # Get token count and size
+            file_info = count_tokens_in_file(file_path)
+            size = file_info["size_bytes"]
+            tokens = file_info["tokens"]
+
+            # Update totals
+            total_size += size
+            total_tokens += tokens
+
+            # Format token count
+            formatted_tokens = format_token_count(tokens)
+
+            table.add_row(str(file_path), str(size), formatted_tokens)
+
+        console.print(table)
+
+        # Print totals
+        console.print(
+            f"\nTotal: [bold]{len(unique_files)}[/bold] files, "
+            f"[bold]{total_size}[/bold] bytes, "
+            f"[bold]{format_token_count(total_tokens)}[/bold] estimated tokens"
+        )
+
+        # Print context window warning if appropriate
+        if total_tokens > 128000:  # Example threshold for Claude
+            console.print(
+                "[yellow]Warning:[/yellow] Estimated token count exceeds 128K tokens "
+                "(Claude's context window limit)"
             )
 
-            # Print context window warning if appropriate
-            if total_tokens > 128000:  # Example threshold for Claude
-                console.print(
-                    "[yellow]Warning:[/yellow] Estimated token count exceeds 128K tokens "
-                    "(Claude's context window limit)"
-                )
-
-            # Add note about token estimation
-            console.print(
-                "\n[dim]Note: Token counts are estimates and may vary by model.[/dim]"
-            )
-
-        except KeyError:
-            console.print(f"[red]Error:[/red] Context set '{set_name}' not found")
+        # Add note about token estimation
+        console.print(
+            "\n[dim]Note: Token counts are estimates and may vary by model.[/dim]"
+        )
 
     except Exception as e:
         console.print(f"[red]Error showing set:[/red] {str(e)}")
@@ -355,7 +390,10 @@ def list_models(
 def query(
     query_text: str = typer.Argument(..., help="The query text to send to the LLM"),
     set_name: str = typer.Option(
-        ..., "--set", "-s", help="Name of the context set to use"
+        ...,
+        "--set",
+        "-s",
+        help="Name of the context set to use (comma-separated for multiple sets)",
     ),
     model_name: str = typer.Option(
         ..., "--model", "-m", help="Name of the model to use"
@@ -380,7 +418,10 @@ def query(
     ),
 ):
     """
-    Query an LLM with a specific context set.
+    Query an LLM with one or more context sets.
+
+    You can specify multiple context sets by separating them with commas:
+    dcx query --set code,tests "How is the test coverage?"
     """
     # Execute the query
     execute_query(

@@ -105,13 +105,25 @@ dcx models list
 Query an LLM with a specific context set:
 
 ```bash
-dcx query --set <set_name> --model <model_name> "Your query text here"
+dcx query --set  --model  "Your query text here"
 ```
+
+### Using Multiple Context Sets
+
+You can combine multiple context sets in a single query by using a comma-separated list:
+
+```bash
+dcx query --set code,tests --model openai "How well is the test coverage for this project?"
+```
+
+This will include all files from both the "code" and "tests" sets, removing any duplicates.
 
 ### Query Options
 
+- `--set, -s TEXT`: Name of context set(s) to use (comma-separated for multiple sets)
+- `--model, -m TEXT`: Name of the model to use
 - `--system TEXT`: Provide a system prompt or instructions
-- `--temperature FLOAT`: Set the temperature (creativity) parameter (default: 0.7)
+- `--temperature, -t FLOAT`: Set the temperature (creativity) parameter (default: 0.7)
 - `--max-tokens INTEGER`: Maximum number of tokens to generate
 - `--no-stream`: Disable streaming (wait for full response)
 - `--hide-filenames`: Exclude filenames from context
