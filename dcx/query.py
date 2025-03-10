@@ -2,12 +2,13 @@
 
 import os
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple
+from typing import List, Optional, Tuple
 
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.live import Live
-from rich.text import Text
+import time
+from .history import save_query_to_history
 
 from .config import load_config
 from .context_sets import get_context_set_files, load_context_sets
@@ -121,6 +122,7 @@ def execute_query(
     stream: bool = True,
     include_filenames: bool = True,
     config_path: Optional[Path] = None,
+    save_history: bool = True,
 ) -> None:
     """
     Execute a query against a model with given context.
@@ -139,6 +141,9 @@ def execute_query(
     try:
         # Load config and files
         config = load_config(config_path)
+
+        start_time = time.time()  # Track execution time
+        response_text = ""  # Store the full response
 
         # Validate the model exists
         if "Models" not in config or model_name not in config["Models"]:
@@ -242,13 +247,27 @@ def execute_query(
         else:
             # Non-streaming mode
             with console.status("[bold cyan]Thinking...[/bold cyan]"):
-                response = provider.get_completion(
+                response_text = provider.get_completion(
                     prompt, system_prompt, temperature, max_tokens
                 )
 
             console.print("[bold cyan]Response:[/bold cyan]")
-            console.print(Markdown(response))
+            console.print(Markdown(response_text))
 
+        # Save to history if requested
+        execution_time = time.time() - start_time
+
+        if save_history:
+            history_id = save_query_to_history(
+                query=query,
+                response=response_text,
+                set_name=set_display,
+                model_name=model_name,
+                files_count=files_count,
+                token_count=total_tokens,
+                execution_time=execution_time,
+            )
+            console.print(f"\n[dim]Query saved to history with ID: {history_id}[/dim]")
         console.print("\n[dim]Query complete.[/dim]")
 
     except Exception as e:

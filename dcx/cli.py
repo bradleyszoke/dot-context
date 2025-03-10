@@ -386,6 +386,46 @@ def list_models(
         console.print(f"[red]Error listing models:[/red] {str(e)}")
 
 
+@app.command("history")
+def history_command(
+    entry_id: Optional[str] = typer.Argument(
+        None, help="ID of the history entry to view (omit to list recent history)"
+    ),
+    max_entries: int = typer.Option(
+        5, "--max", "-m", help="Maximum number of entries to display in list view"
+    ),
+    save_path: Optional[Path] = typer.Option(
+        None, "--save", "-s", help="Save the entry to a file"
+    ),
+):
+    """
+    View query history.
+
+    Use without ID to list recent queries:
+        dcx history
+
+    Use with an ID to view a specific entry:
+        dcx history a1b2c3d4
+
+    Use with --save to save to a file:
+        dcx history a1b2c3d4 --save result.md
+    """
+    from .history import display_history_list, display_history_entry, save_entry_to_file
+
+    # If no entry ID is provided, show the list of recent history
+    if not entry_id:
+        display_history_list(max_entries)
+        return
+
+    # Otherwise, show or save the specific entry
+    if save_path:
+        success = save_entry_to_file(entry_id, save_path)
+        if success:
+            console.print(f"[green]History entry saved to:[/green] {save_path}")
+    else:
+        display_history_entry(entry_id)
+
+
 @app.command()
 def query(
     query_text: str = typer.Argument(..., help="The query text to send to the LLM"),
@@ -413,6 +453,9 @@ def query(
     hide_filenames: bool = typer.Option(
         False, "--hide-filenames", help="Exclude filenames from context"
     ),
+    no_history: bool = typer.Option(
+        False, "--no-history", help="Don't save query to history"
+    ),
     config_path: Optional[Path] = typer.Option(
         None, "--file", "-f", help="Path to .context file"
     ),
@@ -434,6 +477,7 @@ def query(
         stream=not no_stream,
         include_filenames=not hide_filenames,
         config_path=config_path,
+        save_history=not no_history,
     )
 
 

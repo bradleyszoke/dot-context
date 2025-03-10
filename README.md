@@ -18,15 +18,6 @@ cd dot-context
 
 # Install in development mode
 pip install -e .
-
-# For OpenAI support:
-pip install -e ".[openai]"
-
-# For Anthropic support:
-pip install -e ".[anthropic]"
-
-# For all providers:
-pip install -e ".[all]"
 ```
 
 ### Quick Start
@@ -130,6 +121,7 @@ This will include all files from both the "code" and "tests" sets, removing any 
 - `--max-tokens INTEGER`: Maximum number of tokens to generate
 - `--no-stream`: Disable streaming (wait for full response)
 - `--hide-filenames`: Exclude filenames from context
+- `--no-history`: Don't save the query to history
 
 ## Configuration
 The .context file supports:
@@ -138,6 +130,53 @@ The .context file supports:
 - Set composition by including other sets
 - Multiple models from different providers
 - Environment variables for sensitive keys
+
+## History
+
+The dot-context tool keeps a history of your queries and their results. You can view and manage this history with the following commands:
+
+### View Recent Queries
+
+List your most recent queries:
+
+```bash
+dcx history
+```
+
+By default, this shows the 5 most recent queries. You can adjust this with the `--max` option:
+
+```bash
+dcx history --max 10
+```
+
+### View Details of a Query
+
+View the full details of a specific query using its ID:
+
+```bash
+dcx history <ID>
+```
+
+### Save a Query Result
+
+Save a query result to a file:
+
+```bash
+dcx history <ID> --save result.md
+```
+
+The file format is determined by the extension:
+- `.json`: Saves the full entry with metadata
+- `.md`: Saves a formatted Markdown document
+- `.txt`: Saves a plain text version
+
+### Disabling History
+
+If you don't want to save a query to history, use the `--no-history` flag:
+
+```bash
+dcx query --set worldbuilding --model gpt4 --no-history "Your query here"
+```
 
 ## Current Status
 
